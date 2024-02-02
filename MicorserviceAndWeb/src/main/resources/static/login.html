@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>login</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style>
+        body {
+            background: #f8f8f8;
+            background-size: cover;
+        }
+        .login-container {
+            width: 350px;
+            margin: 85px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            background: #ffffffa2;
+            border-radius: 5px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        }
+        .login-container h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .login-container .el-form-item {
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .login-container .el-button {
+            width: 100%;
+        }
+        .login-container .el-input__inner {
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .login-container .el-input__inner:focus {
+            box-shadow: none;
+        }
+        .login-container .el-button--primary {
+            background-color: #20a0ff;
+            border-color: #20a0ff;
+        }
+        .login-container .el-button--primary:hover {
+            background-color: #1976d2;
+            border-color: #1976d2;
+        }
+        .login-container .el-button--primary:active {
+            background-color: #1565c0;
+            border-color: #1565c0;
+        }
+        body{
+            background-image: url("./img/bg4.jpg");
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="login-container">
+        <h1>Login</h1>
+        <el-tabs v-model="activeTab">
+            <el-tab-pane label="Login">
+                <el-form ref="loginForm" :model="loginForm" :rules="loginRules">
+                    <el-form-item label="username" prop="username">
+                        <el-input v-model="loginForm.username" placeholder="Please enter your username"></el-input>
+                    </el-form-item>
+                    <el-form-item label="password" prop="password">
+                        <el-input v-model="loginForm.password" type="password" placeholder="Please enter your password"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="login('loginForm')">Login</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+            <el-tab-pane label="Register">
+                <el-form ref="registerForm" :model="registerForm" :rules="registerRules">
+                    <el-form-item label="username" prop="username">
+                        <el-input v-model="registerForm.username" placeholder="Please enter your username"></el-input>
+                    </el-form-item>
+                    <el-form-item label="password" prop="password">
+                        <el-input v-model="registerForm.password" type="password" placeholder="Please enter your password"></el-input>
+                    </el-form-item>
+                    <el-form-item label="confirm" prop="confirmPassword">
+                        <el-input v-model="registerForm.confirmPassword" type="password" placeholder="Please confirm your password"></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="register('registerForm')">Register</el-button>
+                    </el-form-item>
+                </el-form>
+            </el-tab-pane>
+        </el-tabs>
+    </div>
+
+</div>
+<!-- 引入组件库 -->
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="https://ajax.aspnetcdn.com/ajax/jquery/jquery-3.5.1.min.js"></script>
+<script src="./js/api.js"></script>
+<script>
+
+    new Vue({
+        el: '#app',
+        data: {
+            activeTab: 0,
+            loginForm: {
+                username: '',
+                password: ''
+            },
+            registerForm: {
+                username: '',
+                password: '',
+                confirmPassword: ''
+            },
+            loginRules: {
+                username: [{ required: true, message: 'Please enter your username', trigger: 'blur' }],
+                password: [{ required: true, message: 'Please enter your password', trigger: 'blur' }]
+            },
+            registerRules: {
+                username: [{ required: true, message: 'Please enter your username', trigger: 'blur' }],
+                password: [{ required: true, message: 'Please enter your password', trigger: 'blur' }],
+                confirmPassword: [{ required: true, message: 'Please confirm your password', trigger: 'blur' }]
+            }
+        },
+        methods: {
+            login(formName) {
+                this.$refs[formName].validate((valid) => {
+                    if (valid) {
+                        const postData = {
+                            username: this.loginForm.username,
+                            password: this.loginForm.password
+                        };
+                        $.ajax({
+                            type: 'POST',
+                            url: '/picture/login',
+                            data: postData,
+                            success: function(res) {
+                                if (res.code === 0) {
+                                    // 登录成功，跳转到首页
+                                    localStorage.setItem("username",res.body.username)
+                                    console.log(res.body.username);
+                                    window.location.href = './home.html';
+
+                                } else {
+                                    // 登录失败，提示错误信息
+                                    alert("Failed to log in")
+                                }
+                            }
+                        });
+                        // Api.login('1',"1").then(resp=>{
+                        //     console.log("fanhui")
+                        // })
+                    } else {
+                        return false;
+                    }
+                });
+            },
+            register(formName) {
+                this.$refs[formName].validate((valid) => {
+                    if (valid) {
+                        const postData = {
+                            username: this.registerForm.username,
+                            password: this.registerForm.password,
+                            confirmPassword: this.registerForm.confirmPassword
+                        };
+                        $.ajax({
+                            type: 'POST',
+                            url: '/picture/register',
+                            data: postData,
+                            success: function(res) {
+                                if (res.code === 0) {
+                                    // 注册成功，跳转到登录页面
+                                    alert("Register successfully")
+                                } else {
+                                    // 注册失败，提示错误信息
+                                    ElementUI.Message.error(res.message);
+                                }
+                            }
+                        });
+                    } else {
+                        return false;
+                    }
+                });
+            }
+        }
+    });
+</script>
+</body>
+</html>
