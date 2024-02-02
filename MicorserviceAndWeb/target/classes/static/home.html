@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>video analysis system</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style>
+        html,body{
+            height: 100%;
+            padding: 0px;
+            margin: 0px;
+        }
+        #app{
+            height: 100%;
+            padding: 50px;
+            margin: 0px;
+            display: flex;
+            flex-direction: column;
+        }
+        body{
+            background-image: url("./img/bg6.jpg");
+            background-size: cover;
+        }
+        #upload{
+            opacity: 0;
+        }
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <div style="position: relative; top:-25px; display: flex; justify-content: flex-end; align-items: center;">
+        <!--<h style="margin:auto; font-size: 30px;; font-weight: bold;">Video analysis system</h>-->
+        <span style=" font-weight: bold; color: rgb(221, 234, 245);">Welcome: {{username}}<el-button size="mini" @click="exit">Logout</el-button></span>
+    </div>
+    <el-row style="height:800px; flex: 1;" :gutter="20" >
+        <el-col :span="12" style="height: 100%;">
+            <el-card style="text-align: left; margin-bottom: 20px; background-color: rgba(240, 248, 255, 0.4);">
+                <div slot="header" class="clearfix">
+                    <i style="color: #6cb5ed; font-size: 25px;" class="el-icon-video-camera-solid"></i>
+                    <span style="font-weight: bold; font-size: larger; margin-right: 220px; color:white">Video Play</span>
+                    <el-button @click="dialogVisible1 = true" >Upload video</el-button>
+                    <el-button type="primary" @click="startDetection">Analyze the video</el-button>
+                </div>
+                <video controls :src="video.path" style="width: 500px;margin-left: 70px;"></video>
+            </el-card>
+
+            <el-card style="background-color: rgba(240, 248, 255, 0.4); height: 265px;">
+                <div slot="header" class="clearfix">
+                    <i style="color: #6cb5ed; font-size: 25px;" class="el-icon-tickets"></i>
+                    <span style="font-weight: bold; color:white; font-size: larger;">Video list</span>
+<!--                    {{video}}-->
+                </div>
+                <el-table max-height="300px" :data="videoList" style=" background:none; width: 100%;height: 160px;" :show-header="false"  @row-click="handleRowClick">
+                    <el-table-column prop="id" label="日期" width=""></el-table-column>
+                    <el-table-column prop="name" label="姓名" width=""></el-table-column>
+                </el-table>
+            </el-card>
+        </el-col>
+        <el-col :span="12" style="height: 90%">
+            <el-card style="height: 100%;overflow: auto; background-color: rgba(240, 248, 255, 0.4);" >
+                <div slot="header" class="clearfix">
+                    <span style="font-weight: bold;margin-right: 20px;color:white; font-size: larger;" @click="">Analysis results</span>
+                    <span id="message"></span>
+                </div>
+                    <div style="padding-bottom: 10px">
+                        <el-input v-model="searchText" placeholder="Please enter your search term" style="width: 50%"></el-input>
+                        <el-button type="primary" @click="search">Search</el-button>
+                        <el-button id="upload" type="primary" @click="dialogVisible = true">上传图片</el-button>
+                    </div>
+                <div>
+                    <!--Search results show-->
+                    <el-row>
+<!--                        {{pictureList}}-->
+                        <el-col :span="8" v-for="pic in pictureList" >
+                            <el-image :src="pic.path" style="height: 100px"></el-image>
+                            <!--<img src="./img/scroll.jpg"  style="height: 100px">-->
+                        </el-col>
+                    </el-row>
+                </div>
+            </el-card>
+        </el-col>
+    </el-row>
+
+<!--    上传图片-->
+    <el-dialog title="上传图片" :visible.sync="dialogVisible" width="30%">
+        <el-upload
+                ref="elUpload"
+                class="upload-demo"
+                action="/picture/uploadImg"
+                :on-success="handleUploadSuccess"
+                :before-upload="beforeUpload"
+                :on-exceed="handleExceed"
+                :limit="3"
+                :file-list="fileList"
+                :auto-upload="false"
+                list-type="picture-card"
+        >
+            <i class="el-icon-plus"></i>
+        </el-upload>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">Cancel</el-button>
+            <el-button type="primary" @click="submit">Confirm</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog title="上传视频" :visible.sync="dialogVisible1" width="30%">
+        <el-upload
+                ref="elUploadVideo"
+                class="upload-demo"
+                action="/picture/uploadVideo"
+                :on-success="handleUploadSuccess"
+                :before-upload="beforeUpload"
+                :on-exceed="handleExceed"
+                :limit="1"
+                :file-list="fileList"
+                :auto-upload="false"
+
+        >
+            <i class="el-icon-plus"></i>
+        </el-upload>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogVisible = false">Cancel</el-button>
+            <el-button type="primary" @click="submitVideo">Confirm</el-button>
+        </div>
+    </el-dialog>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="https://ajax.aspnetcdn.com/ajax/jquery/jquery-3.5.1.min.js"></script>
+<script src="./js/websocket.js"></script>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data: {
+            videoList: [],
+            video:{},
+            pictureList:[],
+            searchText: '',
+            count: 0,
+            dialogVisible:false,
+            dialogVisible1:false,
+            fileList: [],
+            username:""
+
+        },
+        mounted() {
+            // 加载视频列表数据
+            this.loadVideoList();
+            this.username = localStorage.getItem("username")
+        },
+        methods: {
+            exit(){
+                window.location.href = './login.html';
+            },
+            startDetection(){
+
+
+                this.$alert('正在计算，请稍后', '提示', {
+                    confirmButtonText: '确定',
+                    callback: action => {
+
+                    }
+                });
+
+                $.ajax({
+                    type: 'GET',
+                    url: '/picture/startDetection',
+                    success:  (res)=>{
+                        if (res.code === 0) {
+                            // 登录成功，跳转到首页
+                            this.videoList = []
+                            this.videoList =  res.body
+                            console.log( this.videoList )
+
+                        } else {
+                            // 登录失败，提示错误信息
+                            ElementUI.Message.error(res.msg);
+                        }
+                    }
+                })
+            },
+            handleRowClick(row){
+                this.video  = row;
+            },
+            handleUploadSuccess(response, file, fileList) {
+                // 上传成功后的处理
+            },
+            beforeUpload(file) {
+                // 上传前的处理
+            },
+            handleExceed(files, fileList) {
+                // 上传文件数量超限的处理
+            },
+            submitVideo(){
+                this.$refs.elUploadVideo.submit()
+                this.dialogVisible1= false
+            },
+            submit() {
+                // 提交表单时的处理
+                // 在这里可以使用this.fileList获取上传成功的文件列表
+                console.log("fileList",this.fileList)
+                this.$refs.elUpload.submit()
+                this.dialogVisible = false
+            },
+            loadVideoList() {
+                // 向后端请求视频列表数据
+                // 这里使用了mock数据
+                $.ajax({
+                    type: 'GET',
+                    url: '/picture/getAllVideo',
+                    success:  (res)=>{
+                        if (res.code === 0) {
+                            // 登录成功，跳转到首页
+                            this.videoList = []
+                            this.videoList =  res.body
+                            console.log( this.videoList )
+
+                        } else {
+                            // 登录失败，提示错误信息
+                            ElementUI.Message.error(res.msg);
+                        }
+                    }
+                })
+                const mockData = [
+                ];
+                this.videoList = mockData;
+            },
+            search() {
+
+
+                const postData = {
+                    searchText:this.searchText
+                    // : this.loginForm.password
+                };
+                $.ajax({
+                    type: 'POST',
+                    url: '/picture/search',
+                    data: postData,
+                    success:  (res)=>{
+                        if (res.code === 0) {
+                            // 登录成功，跳转到首页
+                            this.pictureList = []
+                            this.pictureList =  res.body
+                            console.log( this.pictureList )
+
+                        } else {
+                            // 登录失败，提示错误信息
+                            ElementUI.Message.error(res.msg);
+                        }
+                    }
+
+                })
+
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
